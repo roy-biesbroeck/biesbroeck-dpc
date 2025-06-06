@@ -1,12 +1,13 @@
-<device-admin xmlns:android="http://schemas.android.com/apk/res/android">
+<device-admin>
     <uses-policies>
-        <limit-password />
-        <watch-login />
-        <reset-password />
         <force-lock />
+        <!-- Add other policies your DPC will use -->
+        <reset-password />
+        <watch-login />
+        <set-global-proxy />
         <wipe-data />
-        <expire-password />
-        <encrypted-storage />
         <disable-camera />
+        <!-- You might not need a specific policy tag for Bluetooth or brightness here,
+             as they are managed through APIs if you are device owner -->
     </uses-policies>
 </device-admin>

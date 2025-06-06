@@ -1,49 +1,49 @@
-package com.biesbroeck.dpc
-
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
-import android.content.Intent
+import android.content.SharedPreferences // For persistence
+import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
+import android.util.Log
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import com.biesbroeck.dpc.ui.theme.BiesbroeckDPCTheme
+import androidx.annotation.RequiresApi
+import androidx.core.content.getSystemService
+import com.biesbroeck.dpc.MyDeviceAdminReceiver
+import androidx.core.content.edit
 
 class MainActivity : ComponentActivity() {
+    private lateinit var dpm: DevicePolicyManager
+    private lateinit var adminComponentName: ComponentName
+    private lateinit var prefs: SharedPreferences
+
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        dpm = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+        adminComponentName = MyDeviceAdminReceiver.getComponentName(this)
+        prefs = getSharedPreferences("DpcPrefs", Context.MODE_PRIVATE)
 
-        setContent {
-            BiesbroeckDPCTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(24.dp),
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Button(onClick = {
-                            activateDeviceAdmin()
-                        }) {
-                            Text("Activate Device Admin")
-                        }
-                    }
-                }
-            }
+        // Check if app is device owner and policies need to be applied
+        if (dpm.isDeviceOwnerApp(packageName) && !policiesApplied()) {
+            Log.d("MainActivity", "Device owner detected, applying policies from MainActivity.")
+            // No need to call applyDevicePoliciesFromActivity, handled by DeviceAdminReceiver
+            markPoliciesApplied()
+        } else if (dpm.isDeviceOwnerApp(packageName) && policiesApplied()) {
+            Log.d("MainActivity", "Device owner detected, policies already applied.")
+        } else if (!dpm.isDeviceOwnerApp(packageName)) {
+            Log.d("MainActivity", "Not a device owner.")
         }
+        // No UI needed for manual activation or policy application
     }
 
-    private fun activateDeviceAdmin() {
-        val componentName = ComponentName(this, MyDeviceAdminReceiver::class.java)
-        val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
-            putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, componentName)
-            putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, "Biesbroeck DPC requires device admin access to enforce policies.")
-        }
-        startActivity(intent)
+    private fun policiesApplied(): Boolean {
+        return prefs.getBoolean("policies_applied_v1", false)
     }
+
+    private fun markPoliciesApplied() {
+        prefs.edit { putBoolean("policies_applied_v1", true) }
+    }
+
+    // Removed: applyDevicePoliciesFromActivity and activateDeviceAdmin, as well as all Compose UI code for manual actions
 }
